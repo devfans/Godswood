@@ -1,0 +1,46 @@
+use crate::tree::*;
+use crate::state;
+use crate::system::ShowSystem;
+use crate::state::GodsPrefabData;
+
+use amethyst:: {
+    Error,
+    assets,
+    core,
+    derive,
+    ecs::prelude::{
+        Entity, Join, Read, ReadStorage, System, Write, WriteStorage
+    },
+    input,
+    prelude::*,
+    renderer::{self, rendy::mesh::*},
+    ui,
+    utils::{self, scene},
+};
+
+
+pub fn run() -> Result<(), Error> {
+    amethyst::start_logger(Default::default());
+    let app_root = utils::application_root_dir()?;
+
+    let asset_dir = app_root.join("assets");
+    let display_config_path = app_root.join("config").join("display.ron");
+    let game_data = GameDataBuilder::default()
+        .with_system_desc(assets::PrefabLoaderSystemDesc::<GodsPrefabData>::default(), "", &[])
+        .with(ShowSystem::default(), "show_system", &[])
+        .with_bundle(utils::fps_counter::FpsCounterBundle::default())?
+        .with_bundle(input::InputBundle::<input::StringBindings>::new())?
+        .with_bundle(core::transform::TransformBundle::new())?
+        .with_bundle(ui::UiBundle::<input::StringBindings>::new())?
+        .with_bundle(renderer::RenderingBundle::<renderer::types::DefaultBackend>::new()
+                     .with_plugin(renderer::plugins::RenderToWindow::from_config_path(display_config_path)
+                                  .with_clear([0.01, 0.03, 0.03, 1.0]))
+                     .with_plugin(renderer::plugins::RenderShaded3D::default())
+                     .with_plugin(ui::RenderUi::default()),
+        )?;
+
+    let mut game = Application::build(asset_dir, state::Loading::default())?.build(game_data)?;
+    game.run();
+    Ok(())
+}
+

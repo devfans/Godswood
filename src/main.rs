@@ -1,10 +1,16 @@
 mod node;
 mod tree;
-#[macro_use] extern crate log;
+mod misc;
+mod app;
+mod state;
+mod system;
+mod resource;
 
-use env_logger;
-use tree::*;
+use amethyst;
+use app::*;
 
 fn main() {
-    env_logger::init();
+    run();
 }
+
+
