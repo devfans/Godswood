@@ -236,16 +236,17 @@ impl SimpleState for Show {
         for wood in woods.values() {
             let wood = wood.read().unwrap();
             let mut depth = 1;
+            let gap = wood.base_gap * -1.0f32;
+            let root = wood.wood.get_root().upgrade().unwrap();
+            let node = root.read().unwrap();
             {
-                let root = wood.wood.get_root().upgrade().unwrap();
                 create_node!(root.clone(), pos!(0.0, 0.0, 0.0));
-                let node = root.read().unwrap();
-                let gap = wood.base_gap * -1.0f32;
                 let point = Point3::new(0.0, 0.0, 0.0);
                 let direction = Vector3::new(0.0, gap, 0.0);
                 draw_line!(point, direction);
                 draw_circle!(Point3::new(0.0, 0.0, -gap), wood.scales.get(&depth).unwrap().clone());
             }
+
             /*
             let nodes = wood.wood.get_nodes_by_depths();
             let depth = wood.wood.get_depth();
