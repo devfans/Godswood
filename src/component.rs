@@ -4,7 +4,7 @@ use std::sync::{Arc, RwLock};
 use amethyst::ecs::{Component, DenseVecStorage };
 
 
-pub type Castle = Godspoint<NodeProto>;
+pub type GodsNode = Godspoint<NodeProto>;
 pub type Forest = Godswoods<NodeProto, TreeProto>;
 
 pub struct Godspoint<N> where N: GodsnodeProto + 'static + Send + Sync {

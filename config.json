@@ -3,10 +3,33 @@
   "children": {
     "service1": {
       "children": {
-        "service3": {}
+        "service5": {
+          "children": {
+            "service6": {},
+            "service7": {}
+          }
+        }
       }
     },
     "service2": {
+      "children": {
+        "service10": {
+          "children": {
+            "service21": {},
+            "service22": {},
+            "service23": {}
+          }
+        },
+        "service11": {
+          "children": {
+          }
+        }
+      }
+    },
+    "service4": {
+      "children": {
+        "service3": {}
+      }
     }
   }
 }

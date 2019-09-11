@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde_json::Value;
 use crate::misc::*;
 
-pub type Godsnodes<T> where T: GodsnodeProto = Arc<RwLock<HashMap<usize, Vec<Weak<Godsnode<T>>>>>>;
-pub type Godsnode<T> where T: GodsnodeProto = RwLock<T>;
+pub type Godsnodes<T> = Arc<RwLock<HashMap<usize, Vec<Weak<Godsnode<T>>>>>>;
+pub type Godsnode<T> = RwLock<T>;
 pub type GodsnodeQ<T> = Vec<Weak<Godsnode<T>>>;
 pub trait GodsnodeProto {
     fn new() -> Self;
@@ -15,7 +15,7 @@ pub trait GodsnodeProto {
 }
 
 
-pub type GodsnodeStore<T> where T: GodsnodeProto= HashMap<u64, Arc<Godsnode<T>>>;
+pub type GodsnodeStore<T> = HashMap<u64, Arc<Godsnode<T>>>;
 pub type GodsnodeIndexStore = HashMap<String, u64>;
 
 pub struct GodsstoreProto<T> where T: GodsnodeProto {
@@ -24,7 +24,7 @@ pub struct GodsstoreProto<T> where T: GodsnodeProto {
     index: GodsnodeIndexStore,
 }
 
-pub type Godsstore<T> where T: GodsnodeProto = RwLock<GodsstoreProto<T>>;
+pub type Godsstore<T> = RwLock<GodsstoreProto<T>>;
 impl<T: GodsnodeProto> GodsstoreProto<T> {
     pub fn new() -> Arc<Godsstore<T>> {
         Arc::new(RwLock::new(GodsstoreProto {
@@ -194,7 +194,7 @@ impl GodsstoreOps<NodeProto> for Arc<Godsstore<NodeProto>> {
         }
         node
     }
-    fn add_app_node(&self, raw: &serde_json::Value) -> Arc<Node> {
+    fn add_app_node(&self, raw: &Value) -> Arc<Node> {
         let name = raw.get_str("name", "new_application");
         let node = self.add_node(raw, name);
         {

@@ -2,6 +2,7 @@ use crate::tree::*;
 use crate::state;
 use crate::system::ShowSystem;
 use crate::state::GodsPrefabData;
+use serde_json::Value;
 
 use amethyst:: {
     Error,
@@ -13,13 +14,13 @@ use amethyst:: {
     },
     input,
     prelude::*,
-    renderer::{self, rendy::mesh::*},
+    renderer::{self, rendy::mesh::*, debug_drawing, plugins },
     ui,
     utils::{self, scene},
 };
 
 
-pub fn run() -> Result<(), Error> {
+pub fn run(raw: &Value) -> Result<(), Error> {
     amethyst::start_logger(Default::default());
     let app_root = utils::application_root_dir()?;
 
@@ -36,10 +37,12 @@ pub fn run() -> Result<(), Error> {
                      .with_plugin(renderer::plugins::RenderToWindow::from_config_path(display_config_path)
                                   .with_clear([0.01, 0.03, 0.03, 1.0]))
                      .with_plugin(renderer::plugins::RenderShaded3D::default())
-                     .with_plugin(ui::RenderUi::default()),
+                     .with_plugin(ui::RenderUi::default())
+                     .with_plugin(plugins::RenderDebugLines::default())
+                     .with_plugin(plugins::RenderSkybox::default())
         )?;
 
-    let mut game = Application::build(asset_dir, state::Loading::default())?.build(game_data)?;
+    let mut game = Application::build(asset_dir, state::Loading::new(raw))?.build(game_data)?;
     game.run();
     Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::resource::ShowState;
-use crate::component::Castle;
+use crate::component::GodsNode;
 
 use amethyst:: {
     Error,
@@ -15,7 +15,7 @@ use amethyst:: {
     },
     input,
     prelude::*,
-    renderer::{self, rendy::mesh::*},
+    renderer::{self, rendy::mesh::*, palette, debug_drawing::{DebugLines, DebugLinesComponent, DebugLinesParams} },
     ui,
     utils::{self, scene},
 };
@@ -33,13 +33,24 @@ impl<'a> System<'a> for ShowSystem {
         ReadStorage<'a, renderer::Camera>,
         WriteStorage<'a, core::transform::Transform>,
         Write<'a, ShowState>,
-        Write<'a, Castle>,
+        Write<'a, GodsNode>,
         WriteStorage<'a, ui::UiText>,
         Read<'a, utils::fps_counter::FpsCounter>,
         ui::UiFinder<'a>,
+        Write<'a, DebugLines>,
     );
     fn run(&mut self, data: Self::SystemData) {
-        let (mut lights, time, camera, mut transforms, mut state, castle, mut ui_text, fps_counter, finder) = data;
+        let (mut lights, time, camera, mut transforms, mut state, castle, mut ui_text, fps_counter, finder, mut dl) = data;
+        let t = (time.absolute_time_seconds() as f32).cos();
+        /*
+        dl.draw_direction(
+            [t, 0.0, 0.5].into(),
+            [10.0, 10.3, 100.0].into(),
+            palette::Srgba::new(200.5, 200.05, 0.65, 1.0),
+        );
+        */
+
+
         /*
         let light_angular_velocity = -1.0;
         let light_orbit_radius = 15.0;

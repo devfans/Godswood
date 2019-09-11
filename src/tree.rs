@@ -18,20 +18,41 @@ impl<N: GodsnodeProto, T: GodswoodProto<N>> Godswoods<N, T> {
             store: GodsstoreProto::<N>::new(),
         }
     }
+
+    pub fn add_wood(&mut self, raw: &Value) {
+        let mut wood: T = T::default(self.store.clone());
+        wood.parse_from_json(raw);
+        wood.init_nodes();
+        let mut woods = self.woods.write().unwrap();
+        let name = wood.read_name();
+        let mut godswood = Godswood {
+            wood,
+            scales: HashMap::new(),
+            base_scale: 1.0,
+            base_gap: 10.0,
+            ph: marker::PhantomData,
+        };
+
+        godswood.calculate_scales();
+        woods.insert(name, Arc::new(RwLock::new(godswood)));
+    }
 }
 
 pub trait GodswoodProto<N> where N: GodsnodeProto {
+    fn default(store: Arc<Godsstore<N>>) -> Self;
     fn init_nodes(&mut self);
     fn get_nodes_by_depths(&self) -> &Godsnodes<N>;
     fn get_depth(&self) -> usize;
     fn get_root(&self) -> Weak<RwLock<N>>;
+    fn parse_from_json(&mut self, raw: &Value);
+    fn read_name(&self) -> String;
 }
 
 pub struct Godswood<N, T> where N: GodsnodeProto, T: GodswoodProto<N> {
-    wood: T,
-    scales: HashMap<usize, f64>,
-    base_scale: f64,
-    base_gap: f64,
+    pub wood: T,
+    pub scales: HashMap<usize, f32>,
+    pub base_scale: f32,
+    pub base_gap: f32,
     ph: marker::PhantomData<N>,
 }
 
@@ -45,12 +66,13 @@ impl<N: GodsnodeProto, T: GodswoodProto<N>> Godswood<N, T> {
             wood,
             scales: HashMap::new(),
             base_scale: 1.0,
-            base_gap: 10.0,
+            base_gap: 5.0,
             ph: marker::PhantomData,
         }
     }
 
     fn calculate_scales(&mut self) {
+        println!("Initializing scales for wood");
         let nodes = self.wood.get_nodes_by_depths();
         let depth = self.wood.get_depth();
         let nodes = nodes.read().unwrap();
@@ -69,16 +91,24 @@ impl<N: GodsnodeProto, T: GodswoodProto<N>> Godswood<N, T> {
                 }
             }
 
-            let scale: f64;
+            let scale: f32;
 
             if kids_max <= 1 {
                 scale = 1.0;
             } else {
-                let angle = PI / kids_max as f64;
-                scale = 2.0 * 0.5 / angle.sin();
+                let angle = PI as f32/ kids_max as f32;
+                scale = 1.0 / angle.sin() + 1.0;
             }
 
+            println!("Calculated scale {} for depth {}", scale, i);
             self.scales.insert(i, scale);
+        }
+        self.scales.insert(depth, 1.0);
+        let mut scale = 1.0f32;
+        for i in (1..depth).rev() {
+            let v = self.scales.get_mut(&i).unwrap();
+            *v *= scale;
+            scale = *v;
         }
     }
 
@@ -123,6 +153,7 @@ pub struct TreeProto {
 impl TreeProto {
     fn init_nodes(&mut self) {
         let nodes_by_depth = self.nodes_by_depth.clone();
+        println!("Initializing nodes for wood");
         if let Some(node) = self.root.upgrade() {
             let mut nodes_by_depth = nodes_by_depth.write().unwrap();
 
@@ -163,6 +194,7 @@ impl TreeProto {
                         let mut kid_app_meta = task.app_meta.clone();
                         let mut kid = node.write().unwrap();
                         kid_app_meta.path.append(&kid.name);
+                        println!("Initializing {}", kid_app_meta.path.read());
                         self.depth = kid_app_meta.path.read_depth();
                         kid.app_meta_map.insert(app_name.clone(), kid_app_meta.clone());
                         self.store.update_index(&kid_app_meta.path.read(), kid.id);
@@ -221,7 +253,20 @@ impl TreeProto {
 
 
 impl GodswoodProto<NodeProto> for TreeProto {
+    fn default(store: Arc<Godsstore<NodeProto>>) -> Self {
+        Self {
+            depth: 0, 
+            nodes_by_depth: Arc::new(RwLock::new(HashMap::new())),
+            root: Weak::new(),
+            store: store,
+        }
+    }
+
+    fn parse_from_json(&mut self, raw: &Value) {
+        self.parse(raw);
+    }
     fn init_nodes(&mut self) {
+        self.init_nodes();
     }
     fn get_nodes_by_depths(&self) -> &Godsnodes<NodeProto> {
         &self.nodes_by_depth
@@ -232,6 +277,12 @@ impl GodswoodProto<NodeProto> for TreeProto {
     fn get_root(&self) -> Weak<RwLock<NodeProto>> {
         self.root.clone()
     }
+    
+    fn read_name(&self) -> String {
+        let root = self.root.clone();
+        root.upgrade().unwrap().read().unwrap().name.clone()
+    }
+
 }
 
 
