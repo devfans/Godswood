@@ -7,8 +7,17 @@ use serde_json::Value;
 use crate::misc::*;
 
 pub struct Godswoods<N, T> where N: GodsnodeProto, T: GodswoodProto<N> {
-    woods: Arc<RwLock<HashMap<String, Arc<RwLock<Godswood<N, T>>>>>>,
-    store: Arc<Godsstore<N>>,
+    pub woods: Arc<RwLock<HashMap<String, Arc<RwLock<Godswood<N, T>>>>>>,
+    pub store: Arc<Godsstore<N>>,
+}
+
+impl<N: GodsnodeProto, T: GodswoodProto<N>> Godswoods<N, T> {
+    pub fn new() -> Self {
+        Self {
+            woods: Arc::new(RwLock::new(HashMap::new())),
+            store: GodsstoreProto::<N>::new(),
+        }
+    }
 }
 
 pub trait GodswoodProto<N> where N: GodsnodeProto {
