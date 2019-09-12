@@ -1,0 +1,21 @@
+/*!
+    @import /amethyst_input/src/bindings.rs#Bindings, StringBindings
+    Bindings<StringBindings>
+*/
+
+(
+    axes: {
+        "check_up": Emulated(
+            pos: Key(Up),
+            neg: Key(Down),
+        ),
+        "check_right": Emulated(
+            pos: Key(Right),
+            neg: Key(Left),
+        ),
+    },
+    actions: {
+
+    },
+)
+

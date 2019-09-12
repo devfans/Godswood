@@ -18,6 +18,8 @@ use amethyst:: {
     window,
 };
 
+use std::collections::VecDeque;
+
 use crate::component::*;
 
 
@@ -132,7 +134,7 @@ impl SimpleState for Show {
             transform.set_translation_xyz(0.0, 10.0, -50.0);
             transform.prepend_rotation_y_axis(PI);
             // transform.prepend_rotation_y_axis(PI * 0.03);
-            transform.prepend_rotation_x_axis(PI * 0.03);
+            transform.prepend_rotation_x_axis(PI * 0.08);
             // transform.prepend_rotation_z_axis(PI * 0.03);
             let (width, height) = {
                 let dim = w.read_resource::<window::ScreenDimensions>();
@@ -164,15 +166,40 @@ impl SimpleState for Show {
             }
         }
 
+        macro_rules! add_rotated_circle {
+            ($center: expr, $radius: expr, $points: expr, $rotation: expr, $color: expr) => {
+                {
+                    let mut prev = None;
+
+                    for i in 0..=$points {
+                        let a = PI * 2.0 / ($points as f32) * (i as f32);
+                        let x = $radius * a.cos();
+                        let y = $radius * a.sin();
+                        let point = Vector3::new(x, y, 0.0);
+                        let point = $center + $rotation * point;
+
+                        if let Some(prev) = prev {
+                            debug_lines_component.add_line(prev, point, $color);
+                        }
+
+                        prev = Some(point);
+                    }
+
+                }
+            }
+        }
+
+
         macro_rules! draw_circle {
             ($center: expr, $radius: expr) => {
                 {
-                    debug_lines_component.add_rotated_circle(
+                    // debug_lines_component.add_rotated_circle(
+                    add_rotated_circle!(
                         $center,
                         $radius,
                         100,
                         UnitQuaternion::from_axis_angle(&Vector3::x_axis(), FRAC_PI_2),
-                        palette::Srgba::new(200.0, 200.0, 200.23, 1.0),
+                        palette::Srgba::new(200.0, 200.0, 200.23, 1.0)
                     );
                 }
             }
@@ -233,18 +260,56 @@ impl SimpleState for Show {
         }
 
         let woods = self.woods.woods.read().unwrap();
+        let mut nodes = VecDeque::new();
         for wood in woods.values() {
             let wood = wood.read().unwrap();
-            let mut depth = 1;
             let gap = wood.base_gap * -1.0f32;
-            let root = wood.wood.get_root().upgrade().unwrap();
-            let node = root.read().unwrap();
-            {
-                create_node!(root.clone(), pos!(0.0, 0.0, 0.0));
-                let point = Point3::new(0.0, 0.0, 0.0);
-                let direction = Vector3::new(0.0, gap, 0.0);
-                draw_line!(point, direction);
-                draw_circle!(Point3::new(0.0, 0.0, -gap), wood.scales.get(&depth).unwrap().clone());
+            let direction = Vector3::new(0.0, gap, 0.0);
+
+            nodes.push_back(((0.0, 0.0, 0.0), wood.wood.get_root(), 1));
+
+            loop {
+                let node = nodes.pop_front();
+                if node.is_none() {
+                    break;
+                }
+
+                let ((x, y, z), node, depth) = node.unwrap();
+                let node = node.upgrade().unwrap();
+                let scale = wood.scales.get(&depth).unwrap() * wood.base_scale;
+                
+                create_node!(node.clone(), pos!(x, y, z));
+
+                let node = node.read().unwrap();
+                let children = node.get_children();
+                let size = children.len();
+                if size == 0 {
+                    continue;
+                } else if size == 1 {
+                    draw_line!(Point3::new(x, y, z), Vector3::new(0.0, -wood.base_gap, 0.0));
+                    nodes.push_back(((x, y - wood.base_gap, z), children[0].clone(), depth + 1));
+                    continue;
+                }
+
+                // draw_line!(Point3::new(x, y, z), direction);
+                draw_circle!(Point3::new(x, y - wood.base_gap, z), scale);
+
+                let mut points = Vec::new();
+
+                let angle = 2f32 * PI / size as f32;
+                for i in 0..size {
+                    let angle = angle * i as f32;
+                    let kid_x = x - scale * angle.cos();
+                    let kid_y = y - wood.base_gap;
+                    let kid_z = z - scale * angle.sin();
+
+                    draw_line!(Point3::new(x, y, z), Vector3::new(kid_x - x, kid_y - y, kid_z - z));
+                    points.push((kid_x, kid_y, kid_z));
+                }
+
+                for node in children.iter() {
+                    nodes.push_back((points.pop().unwrap(), node.clone(), depth + 1));
+                }
             }
 
             /*

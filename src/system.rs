@@ -7,11 +7,11 @@ use amethyst:: {
     core::{
         self,
         SystemDesc,
-        math::{UnitQuaternion, Vector3}
+        math::{UnitQuaternion, Vector3, Point3}
     },
     derive::SystemDesc,
     ecs::prelude::{
-        Entity, Join, Read, ReadStorage, System, Write, WriteStorage, SystemData,
+        Entity, Join, Read, ReadStorage, System, Write, WriteStorage, SystemData, ReadExpect
     },
     input,
     prelude::*,
@@ -38,10 +38,35 @@ impl<'a> System<'a> for ShowSystem {
         Read<'a, utils::fps_counter::FpsCounter>,
         ui::UiFinder<'a>,
         Write<'a, DebugLines>,
+        Read<'a, input::InputHandler<input::StringBindings>>
     );
     fn run(&mut self, data: Self::SystemData) {
-        let (mut lights, time, camera, mut transforms, mut state, castle, mut ui_text, fps_counter, finder, mut dl) = data;
+        let (mut lights, time, camera, mut transforms, mut state, castle, mut ui_text, fps_counter, finder, mut dl, input) = data;
         let t = (time.absolute_time_seconds() as f32).cos();
+        for (_, mut transform) in (&camera, &mut transforms).join() {
+            if let Some(movement) = input.axis_value("check_up") {
+                transform.prepend_translation_y(
+                    8.0 * time.delta_seconds() * movement as f32,
+                );
+
+                // We make sure the paddle remains in the arena.
+                let y = transform.translation().y;
+                transform.set_translation_y(
+                    y.max(-1000.0 * 0.5).min(1000.0 * 0.5),
+                );
+            }
+
+            if let Some(movement) = input.axis_value("check_right") {
+                let angle = time.delta_seconds() * movement as f32;
+                let trans = transform.translation().clone();
+
+                let pos = Point3::new(0., 0., 0.) + UnitQuaternion::from_axis_angle(&Vector3::y_axis(), angle) * trans;
+
+                transform.set_translation_xyz(pos.x, pos.y, pos.z);
+                transform.prepend_rotation_y_axis(angle);
+            }
+        }
+
         /*
         dl.draw_direction(
             [t, 0.0, 0.5].into(),
