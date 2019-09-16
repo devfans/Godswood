@@ -7,7 +7,8 @@ use amethyst:: {
     core::{
         self,
         SystemDesc,
-        math::{UnitQuaternion, Vector3, Point3}
+        math::{UnitQuaternion, Vector3, Point3},
+        transform::Transform
     },
     derive::SystemDesc,
     ecs::prelude::{
@@ -30,7 +31,9 @@ impl<'a> System<'a> for ShowSystem {
     type SystemData = (
         WriteStorage<'a, renderer::light::Light>,
         Read<'a, core::timing::Time>,
+        ReadExpect<'a, renderer::ActiveCamera>,
         ReadStorage<'a, renderer::Camera>,
+        WriteStorage<'a, ui::UiTransform>,
         WriteStorage<'a, core::transform::Transform>,
         Write<'a, ShowState>,
         Write<'a, GodsNode>,
@@ -41,8 +44,30 @@ impl<'a> System<'a> for ShowSystem {
         Read<'a, input::InputHandler<input::StringBindings>>
     );
     fn run(&mut self, data: Self::SystemData) {
-        let (mut lights, time, camera, mut transforms, mut state, castle, mut ui_text, fps_counter, finder, mut dl, input) = data;
+        let (mut lights, time, active_camera, camera, mut ui_transforms, mut transforms, mut state, godsnode, mut ui_text, fps_counter, finder, mut dl, input) = data;
         let t = (time.absolute_time_seconds() as f32).cos();
+        /*
+        let (cam, trans) = {
+            let (cam, trans) = (&camera, &transforms).join().next().unwrap();
+            (cam.clone(), trans.clone())
+        };
+        for (mut ui_trans, _) in (&mut ui_transforms, &mut transforms).join() {
+            let pos = (cam.as_matrix() * trans.global_view_matrix()).transform_vector(&Vector3::new(0.,0.,0.));
+            ui_trans.local_x = pos.x;
+            ui_trans.local_y = pos.y;
+        }
+        */
+
+        if let Some(camera_entity) = active_camera.entity {
+            let active_camera = camera.get(camera_entity).unwrap();
+            let camera_transform = transforms.get(camera_entity).unwrap().clone();
+            for (mut ui_trans, _) in (&mut ui_transforms, &mut transforms).join() {
+                let pos = (active_camera.as_matrix() * camera_transform.global_view_matrix()).transform_vector(&Vector3::new(0.,0.,0.));
+                ui_trans.local_x = pos.x;
+                ui_trans.local_y = pos.y;
+            }
+        }
+
         for (_, mut transform) in (&camera, &mut transforms).join() {
             if let Some(movement) = input.axis_value("check_up") {
                 transform.prepend_translation_y(

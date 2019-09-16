@@ -12,8 +12,8 @@ use amethyst:: {
     },
     input,
     prelude::*,
-    renderer::{self, rendy::{self, mesh::*}, light, palette, camera, shape, debug_drawing::{DebugLines, DebugLinesComponent, DebugLinesParams} },
-    ui,
+    renderer::{self, rendy::{self, mesh::*}, light, palette, camera, shape, debug_drawing::{DebugLines, DebugLinesComponent, DebugLinesParams}, plugins },
+    ui::{self, get_default_font, FontHandle, TtfFormat, FontAsset, UiText, UiTransform, Anchor},
     utils::{self, scene},
     window,
 };
@@ -31,6 +31,7 @@ pub struct Loading {
     progress: assets::ProgressCounter,
     prefab: Option<assets::Handle<assets::Prefab<GodsPrefabData>>>,
     wood: Option<Value>,
+    font: Option<FontHandle>
 }
 
 impl Loading {
@@ -47,6 +48,12 @@ impl SimpleState for Loading {
         self.prefab = Some(data.world.exec(|loader: assets::PrefabLoader<'_, GodsPrefabData>|{
             loader.load("prefab/godsnode.ron", assets::RonFormat, &mut self.progress)
         }));
+
+        {
+            let loader = data.world.read_resource::<assets::Loader>();
+            let fonts = data.world.read_resource::<assets::AssetStorage<FontAsset>>();
+            self.font = Some(loader.load("font/square.ttf", TtfFormat, &mut self.progress, &fonts));
+        }
 
         data.world.exec(|mut creator: ui::UiCreator<'_>| {
             creator.create("ui/fps.ron", &mut self.progress);
@@ -73,7 +80,8 @@ impl SimpleState for Loading {
                 let mut woods = Forest::new();
                 println!("Adding new wood");
                 woods.add_wood(&raw);
-                Trans::Switch(Box::new(Show { scene: self.prefab.as_ref().unwrap().clone(), woods, }))
+                let font = self.font.clone().unwrap().clone();
+                Trans::Switch(Box::new(Show { scene: self.prefab.as_ref().unwrap().clone(), woods, font }))
             }
             assets::Completion::Loading => Trans::None
         }
@@ -83,6 +91,7 @@ impl SimpleState for Loading {
 pub struct Show {
     scene: assets::Handle<assets::Prefab<GodsPrefabData>>,
     woods: Forest,
+    font: FontHandle,
 }
 
 impl SimpleState for Show {
@@ -140,10 +149,13 @@ impl SimpleState for Show {
                 let dim = w.read_resource::<window::ScreenDimensions>();
                 (dim.width(), dim.height())
             };
-            w.create_entity()
+            let entity = w.create_entity()
                 .with(camera::Camera::standard_3d(width, height))
                 .with(transform)
                 .build();
+            w.insert(renderer::ActiveCamera {
+                entity: Some(entity),
+            });
         }
 
         // Add debug lines
@@ -193,8 +205,8 @@ impl SimpleState for Show {
         macro_rules! draw_circle {
             ($center: expr, $radius: expr) => {
                 {
-                    // debug_lines_component.add_rotated_circle(
-                    add_rotated_circle!(
+                    debug_lines_component.add_rotated_circle(
+                    // add_rotated_circle!(
                         $center,
                         $radius,
                         100,
@@ -243,17 +255,23 @@ impl SimpleState for Show {
             }
         }
 
-
         macro_rules! create_node {
-            ($node: expr, $pos: expr) => {
+            ($node: expr, $pos: expr, $id: expr, $name: expr) => {
                 {
                     // Create godswood node
-                                        
-                    w.create_entity()
-                        .with($pos)
+                    let parent = w.create_entity()
+                        .with($pos.clone())
                         .with(mesh.clone())
                         .with(mtl.clone())
                         .with(GodsNode { node: $node })
+                        .build();
+
+                    // Create UI display
+                    w.create_entity()
+                        .with($pos)
+                        .with(core::Parent { entity: parent })
+                        .with(UiTransform::new(format!("node{}", $id), Anchor::Middle, Anchor::Middle, 0., 10., 0., 200., 50.))
+                        .with(UiText::new(self.font.clone(), format!("node{}", $name), [255., 10., 10., 1.], 50.0))
                         .build();
                 }
             }
@@ -275,12 +293,11 @@ impl SimpleState for Show {
                 }
 
                 let ((x, y, z), node, depth) = node.unwrap();
-                let node = node.upgrade().unwrap();
+                let node_arc = node.upgrade().unwrap();
                 let scale = wood.scales.get(&depth).unwrap() * wood.base_scale;
-                
-                create_node!(node.clone(), pos!(x, y, z));
+                let node = node_arc.read().unwrap();
+                create_node!(node_arc.clone(), pos!(x, y, z), node.id, node.name.clone());
 
-                let node = node.read().unwrap();
                 let children = node.get_children();
                 let size = children.len();
                 if size == 0 {
@@ -293,6 +310,7 @@ impl SimpleState for Show {
 
                 // draw_line!(Point3::new(x, y, z), direction);
                 draw_circle!(Point3::new(x, y - wood.base_gap, z), scale);
+                break;
 
                 let mut points = Vec::new();
 
