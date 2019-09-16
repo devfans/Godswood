@@ -7,7 +7,7 @@ use amethyst:: {
     core::{
         self,
         SystemDesc,
-        math::{UnitQuaternion, Vector3, Point3},
+        math::{UnitQuaternion, Vector3, Point3, Vector2},
         transform::Transform
     },
     derive::SystemDesc,
@@ -19,6 +19,7 @@ use amethyst:: {
     renderer::{self, rendy::mesh::*, palette, debug_drawing::{DebugLines, DebugLinesComponent, DebugLinesParams} },
     ui,
     utils::{self, scene},
+    window
 };
 
 
@@ -31,6 +32,7 @@ impl<'a> System<'a> for ShowSystem {
     type SystemData = (
         WriteStorage<'a, renderer::light::Light>,
         Read<'a, core::timing::Time>,
+        ReadExpect<'a, window::ScreenDimensions>,
         ReadExpect<'a, renderer::ActiveCamera>,
         ReadStorage<'a, renderer::Camera>,
         WriteStorage<'a, ui::UiTransform>,
@@ -39,12 +41,11 @@ impl<'a> System<'a> for ShowSystem {
         Write<'a, GodsNode>,
         WriteStorage<'a, ui::UiText>,
         Read<'a, utils::fps_counter::FpsCounter>,
-        ui::UiFinder<'a>,
         Write<'a, DebugLines>,
         Read<'a, input::InputHandler<input::StringBindings>>
     );
     fn run(&mut self, data: Self::SystemData) {
-        let (mut lights, time, active_camera, camera, mut ui_transforms, mut transforms, mut state, godsnode, mut ui_text, fps_counter, finder, mut dl, input) = data;
+        let (mut lights, time, screen, active_camera, camera, mut ui_transforms, mut transforms, mut state, godsnode, mut ui_text, fps_counter, mut dl, input) = data;
         let t = (time.absolute_time_seconds() as f32).cos();
         /*
         let (cam, trans) = {
@@ -58,13 +59,32 @@ impl<'a> System<'a> for ShowSystem {
         }
         */
 
+        /*
         if let Some(camera_entity) = active_camera.entity {
             let active_camera = camera.get(camera_entity).unwrap();
             let camera_transform = transforms.get(camera_entity).unwrap().clone();
-            for (mut ui_trans, _) in (&mut ui_transforms, &mut transforms).join() {
-                let pos = (active_camera.as_matrix() * camera_transform.global_view_matrix()).transform_vector(&Vector3::new(0.,0.,0.));
-                ui_trans.local_x = pos.x;
-                ui_trans.local_y = pos.y;
+            for (mut ui_trans, transform) in (&mut ui_transforms, &transforms).join() {
+                let cam_pos = transform.translation();
+                println!("x {}, y {}", cam_pos.x, cam_pos.y);
+                let pos = (active_camera.as_matrix() * transform.global_view_matrix()).transform_vector(&Vector3::new(0.,0.,0.));
+                println!("x {}, y {}", pos.x, pos.y);
+                ui_trans.local_x = 10.;
+                ui_trans.local_y = 20.;
+            }
+        }
+        */
+
+        let dimension = Vector2::new(screen.width(), screen.height());
+
+        if let Some(camera_entity) = active_camera.entity {
+            let active_camera = camera.get(camera_entity).unwrap();
+            let camera_transform = transforms.get(camera_entity).unwrap().clone();
+            for (mut ui_trans, transform) in (&mut ui_transforms, &transforms).join() {
+                let trans = transform.translation();
+                let pos = active_camera.projection().world_to_screen(Point3::new(trans.x, trans.y, trans.z), dimension, &camera_transform);
+                println!("x {}, y {}", pos.x, pos.y);
+                ui_trans.local_x = 100.;
+                ui_trans.local_y = 200.;
             }
         }
 

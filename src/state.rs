@@ -268,8 +268,8 @@ impl SimpleState for Show {
 
                     // Create UI display
                     w.create_entity()
-                        .with($pos)
                         .with(core::Parent { entity: parent })
+                        .with($pos)
                         .with(UiTransform::new(format!("node{}", $id), Anchor::Middle, Anchor::Middle, 0., 10., 0., 200., 50.))
                         .with(UiText::new(self.font.clone(), format!("node{}", $name), [255., 10., 10., 1.], 50.0))
                         .build();
