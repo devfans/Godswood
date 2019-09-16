@@ -10,7 +10,9 @@ edition = "2018"
 serde_json = "*"
 
 [dependencies.amethyst]
-git = "https://github.com/amethyst/amethyst"
+git = "https://github.com/devfans/amethyst"
+branch = "godswood"
 features = ["metal", "nightly", "no-slow-safety-checks"]
+
 
 
