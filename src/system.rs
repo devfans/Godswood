@@ -79,12 +79,15 @@ impl<'a> System<'a> for ShowSystem {
         if let Some(camera_entity) = active_camera.entity {
             let active_camera = camera.get(camera_entity).unwrap();
             let camera_transform = transforms.get(camera_entity).unwrap().clone();
-            for (mut ui_trans, transform) in (&mut ui_transforms, &transforms).join() {
-                let trans = transform.translation();
+            for (mut ui_trans, mut transform) in (&mut ui_transforms, &mut transforms).join() {
+                let trans = transform.translation().clone();
                 let pos = active_camera.projection().world_to_screen(Point3::new(trans.x, trans.y, trans.z), dimension, &camera_transform);
                 println!("x {}, y {}", pos.x, pos.y);
-                ui_trans.local_x = 100.;
-                ui_trans.local_y = 200.;
+                ui_trans.local_x = 800.;
+                ui_trans.local_y = 300.;
+                // transform.set_translation_x(200.);
+                // transform.set_translation_y(200.);
+                dl.draw_line(Point3::new(0.,0.,0.), Point3::new(trans.x, trans.y, trans.z), palette::Srgba::new(200., 0., 0., 1.));
             }
         }
 

@@ -13,7 +13,7 @@ use amethyst:: {
     input,
     prelude::*,
     renderer::{self, rendy::{self, mesh::*}, light, palette, camera, shape, debug_drawing::{DebugLines, DebugLinesComponent, DebugLinesParams}, plugins },
-    ui::{self, get_default_font, FontHandle, TtfFormat, FontAsset, UiText, UiTransform, Anchor},
+    ui::{self, get_default_font, FontHandle, TtfFormat, FontAsset, UiText, UiTransform, Anchor, UiLabelBuilder, UiLabelBuilderResources},
     utils::{self, scene},
     window,
 };
@@ -269,10 +269,22 @@ impl SimpleState for Show {
                     // Create UI display
                     w.create_entity()
                         .with(core::Parent { entity: parent })
-                        .with($pos)
-                        .with(UiTransform::new(format!("node{}", $id), Anchor::Middle, Anchor::Middle, 0., 10., 0., 200., 50.))
+                        // .with($pos)
+                        .with(UiTransform::new(format!("node{}", $id), Anchor::Middle, Anchor::Middle, 800., 580., 0., 200., 50.))
                         .with(UiText::new(self.font.clone(), format!("node{}", $name), [255., 10., 10., 1.], 50.0))
                         .build();
+                    /*
+                    UiLabelBuilder::new(format!("node{}", $name))
+                        .with_id(format!("node{}", $id))
+                        .with_anchor(Anchor::Middle)
+                        .with_position(0., 0.)
+                        .with_font(self.font.clone())
+                        .with_font_size(50.)
+                        .with_text_color([255., 10., 10., 1.])
+                        .with_parent(parent)
+                        .build_from_world(w);
+                    */
+
                 }
             }
         }
@@ -310,7 +322,7 @@ impl SimpleState for Show {
 
                 // draw_line!(Point3::new(x, y, z), direction);
                 draw_circle!(Point3::new(x, y - wood.base_gap, z), scale);
-                break;
+                // break;
 
                 let mut points = Vec::new();
 
